@@ -8,7 +8,7 @@ Which is based on the code from https://github.com/xmrig/xmrig
 
 # Usage
 
-This will currently only work on devices with ARM64 architecture.
+This will currently only work on devices with armv8 and armv7 architecture.
 
 Install and run the app, enter your pool and wallet data, then press the start button
 to start mining or stop to stop mining.
