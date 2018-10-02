@@ -27,7 +27,7 @@ The xmrig binary is copied to the app's internal directory along with its depend
 Then, the binary is started using the ProcessBuilder class, and the output is captured
 into the app's scrolling pane once each secons.
 
-Currently only arm64 binaries are included, and the app will refuse to work on 
+Currently only arm64 and arm32 binaries are included, and the app will refuse to work on 
 other architectures like x86 or 32 bit devices. 
 
 # License
