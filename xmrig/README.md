@@ -1,6 +1,6 @@
 # XMRig
 
-:warning: **[Monero will change PoW algorithm on October 18](https://github.com/xmrig/xmrig/issues/753), all miners and proxy should be updated to [v2.8+](https://github.com/xmrig/xmrig/releases/tag/v2.8.0-rc)** :warning:
+:warning: **[Monero changed PoW algorithm on October 18](https://github.com/xmrig/xmrig/issues/753), all miners and proxy should be updated to [v2.8+](https://github.com/xmrig/xmrig/releases/tag/v2.8.3)** :warning:
 
 [![Github All Releases](https://img.shields.io/github/downloads/xmrig/xmrig/total.svg)](https://github.com/xmrig/xmrig/releases)
 [![GitHub release](https://img.shields.io/github/release/xmrig/xmrig/all.svg)](https://github.com/xmrig/xmrig/releases)
@@ -52,14 +52,21 @@ Use [config.xmrig.com](https://config.xmrig.com/xmrig) to generate, edit or shar
 
 ### Options
 ```
-  -a, --algo=ALGO          cryptonight (default) or cryptonight-lite
+  -a, --algo=ALGO          specify the algorithm to use
+                             cryptonight
+                             cryptonight-lite
+                             cryptonight-heavy
   -o, --url=URL            URL of mining server
   -O, --userpass=U:P       username:password pair for mining server
   -u, --user=USERNAME      username for mining server
   -p, --pass=PASSWORD      password for mining server
+      --rig-id=ID          rig identifier for pool-side statistics (needs pool support)
   -t, --threads=N          number of miner threads
   -v, --av=N               algorithm variation, 0 auto select
-  -k, --keepalive          send keepalived for prevent timeout (need pool support)
+  -k, --keepalive          send keepalived packet for prevent timeout (needs pool support)
+      --nicehash           enable nicehash.com support
+      --tls                enable SSL/TLS support (needs pool support)
+      --tls-fingerprint=F  pool TLS certificate fingerprint, if set enable strict certificate pinning
   -r, --retries=N          number of times to retry before switch to backup server (default: 5)
   -R, --retry-pause=N      time to pause between retries (default: 5)
       --cpu-affinity       set process affinity to CPU core(s), mask 0x3 for cores 0 and 1
@@ -75,16 +82,20 @@ Use [config.xmrig.com](https://config.xmrig.com/xmrig) to generate, edit or shar
   -S, --syslog             use system log for output messages
       --max-cpu-usage=N    maximum CPU usage for automatic threads mode (default 75)
       --safe               safe adjust threads and av settings for current CPU
-      --nicehash           enable nicehash/xmrig-proxy support
+      --asm=ASM            ASM code for cn/2, possible values: auto, none, intel, ryzen.
       --print-time=N       print hashrate report every N seconds
       --api-port=N         port for the miner API
       --api-access-token=T access token for API
       --api-worker-id=ID   custom worker-id for API
+      --api-id=ID          custom instance ID for API
+      --api-ipv6           enable IPv6 support for API
+      --api-no-restricted  enable full remote access (only if API token set)
+      --dry-run            test configuration and exit
   -h, --help               display this help and exit
   -V, --version            output version information and exit
 ```
 
-Also you can use configuration via config file, default **config.json**. You can load multiple config files and combine it with command line options.
+Also you can use configuration via config file, default name **config.json**. Some options available only via config file: [`autosave`](https://github.com/xmrig/xmrig/issues/767), [`hw-aes`](https://github.com/xmrig/xmrig/issues/563). `watch` option currently not implemented in miners only in proxy.
 
 ## Algorithm variations
 
@@ -134,14 +145,14 @@ Please note performance is highly dependent on system load. The numbers above ar
 ## Release checksums
 ### SHA-256
 ```
-ea6a71732937e06d5434b863bedd2d627c500e8ce30b30a02054015bb3aae3fc xmrig-2.8.0-xenial-amd64.tar.gz/xmrig-2.8.0/xmrig
-a067de09a2d49c39317d6a98e420fcd80ef040c8cecb6b21317cbe4eabbdb995 xmrig-2.8.0-xenial-amd64.tar.gz/xmrig-2.8.0/xmrig-notls
-89b7b4616faec76c40dab714046ea08ebcd6c558299d17d44639e6bc62c54186 xmrig-2.8.0-gcc-win32.zip/xmrig.exe
-0fae870bef4223905b24bb00283b3bba7ece547a09a540033beb9a2a33335124 xmrig-2.8.0-gcc-win32.zip/xmrig-notls.exe
-953df29ef354d541b89a70a36ddf16d8a9d5f2c37419d3aacd1352ff6ff539e8 xmrig-2.8.0-gcc-win64.zip/xmrig.exe
-84d73422a43b46879d88f87a492e99c81d5d632eb3be79793fc0b895196f131d xmrig-2.8.0-gcc-win64.zip/xmrig-notls.exe
-8e1302fe632249a713d7af0b7f3f50ad6e707d71d00fcd1f3be56abc024f98ac xmrig-2.8.0-msvc-win64.zip/xmrig.exe
-0042b5e7b14a4f8aca748a4c7656a0ec6705bc593c26f9987a25b10fa471f004 xmrig-2.8.0-msvc-win64.zip/xmrig-notls.exe
+365198ed4f1205c42fa448d41c9088d3dea6bff43173c5e870e8bec4631c3a7d xmrig-2.8.3-xenial-amd64.tar.gz/xmrig-2.8.3/xmrig
+77b235244eea7eab72c420c3575bc6c32eb83061d90b84addb187257c9819be7 xmrig-2.8.3-xenial-amd64.tar.gz/xmrig-2.8.3/xmrig-notls
+586b81e455ed0aa7623507b0307ba34afdc2ff3494a822cbf1fcc0c1a86ac974 xmrig-2.8.3-gcc-win32.zip/xmrig.exe
+2d35980542b603e02832c774ce0d0bc22e269f066bcdff20a919dcbd23e2ef2a xmrig-2.8.3-gcc-win32.zip/xmrig-notls.exe
+0a638249271f3a7d7ad87643a1fa250cc21b9871dca951d15c7c214346cb02aa xmrig-2.8.3-gcc-win64.zip/xmrig.exe
+0f9d05c96d2268f1cf3e2c120ad94e440a730e753efa2ae8cbc9ef4567b4da03 xmrig-2.8.3-gcc-win64.zip/xmrig-notls.exe
+19600aead9ebc509db57538e5ace0a30604708c051b34f81c0bdc1b587624434 xmrig-2.8.3-msvc-win64.zip/xmrig.exe
+b9380c58a863488c8d9d138bb32a92b5ab3bb7b4e614e8caa85239cbb2ca3c8b xmrig-2.8.3-msvc-win64.zip/xmrig-notls.exe
 ```
 
 ## Contacts
