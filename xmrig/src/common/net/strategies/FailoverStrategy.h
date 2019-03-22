@@ -5,7 +5,8 @@
  * Copyright 2014-2016 Wolf9466    <https://github.com/OhGodAPet>
  * Copyright 2016      Jay D Dee   <jayddee246@gmail.com>
  * Copyright 2017-2018 XMR-Stak    <https://github.com/fireice-uk>, <https://github.com/psychocrypt>
- * Copyright 2016-2018 XMRig       <https://github.com/xmrig>, <support@xmrig.com>
+ * Copyright 2018-2019 SChernykh   <https://github.com/SChernykh>
+ * Copyright 2016-2019 XMRig       <https://github.com/xmrig>, <support@xmrig.com>
  *
  *   This program is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -21,28 +22,33 @@
  *   along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __FAILOVERSTRATEGY_H__
-#define __FAILOVERSTRATEGY_H__
+#ifndef XMRIG_FAILOVERSTRATEGY_H
+#define XMRIG_FAILOVERSTRATEGY_H
 
 
 #include <vector>
 
 
+#include "base/net/Pool.h"
 #include "common/interfaces/IClientListener.h"
 #include "common/interfaces/IStrategy.h"
-#include "common/net/Pool.h"
+
+
+namespace xmrig {
 
 
 class Client;
 class IStrategyListener;
-class Url;
 
 
 class FailoverStrategy : public IStrategy, public IClientListener
 {
 public:
-    FailoverStrategy(const std::vector<Pool> &urls, int retryPause, int retries, IStrategyListener *listener, bool quiet = false);
-    ~FailoverStrategy();
+    FailoverStrategy(const std::vector<Pool> &pool, int retryPause, int retries, IStrategyListener *listener, bool quiet = false);
+    FailoverStrategy(int retryPause, int retries, IStrategyListener *listener, bool quiet = false);
+    ~FailoverStrategy() override;
+
+    void add(const Pool &pool);
 
 public:
     inline bool isActive() const override  { return m_active >= 0; }
@@ -50,6 +56,7 @@ public:
     int64_t submit(const JobResult &result) override;
     void connect() override;
     void resume() override;
+    void setAlgo(const Algorithm &algo) override;
     void stop() override;
     void tick(uint64_t now) override;
 
@@ -60,7 +67,7 @@ protected:
     void onResultAccepted(Client *client, const SubmitResult &result, const char *error) override;
 
 private:
-    void add(const Pool &pool);
+    inline Client *active() const { return m_pools[static_cast<size_t>(m_active)]; }
 
     const bool m_quiet;
     const int m_retries;
@@ -71,4 +78,7 @@ private:
     std::vector<Client*> m_pools;
 };
 
-#endif /* __FAILOVERSTRATEGY_H__ */
+
+} /* namespace xmrig */
+
+#endif /* XMRIG_FAILOVERSTRATEGY_H */

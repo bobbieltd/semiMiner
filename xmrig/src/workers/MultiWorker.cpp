@@ -6,7 +6,7 @@
  * Copyright 2016      Jay D Dee   <jayddee246@gmail.com>
  * Copyright 2017-2018 XMR-Stak    <https://github.com/fireice-uk>, <https://github.com/psychocrypt>
  * Copyright 2018      Lee Clagett <https://github.com/vtnerd>
- * Copyright 2018      SChernykh   <https://github.com/SChernykh>
+ * Copyright 2018-2019 SChernykh   <https://github.com/SChernykh>
  * Copyright 2016-2019 XMRig       <https://github.com/xmrig>, <support@xmrig.com>
  *
  *   This program is free software: you can redistribute it and/or modify
@@ -28,6 +28,7 @@
 
 
 #include "crypto/CryptoNight_test.h"
+#include "common/log/Log.h"
 #include "workers/CpuThread.h"
 #include "workers/MultiWorker.h"
 #include "workers/Workers.h"
@@ -54,14 +55,29 @@ bool MultiWorker<N>::selfTest()
     using namespace xmrig;
 
     if (m_thread->algorithm() == CRYPTONIGHT) {
-        return verify(VARIANT_0,    test_output_v0)  &&
-               verify(VARIANT_1,    test_output_v1)  &&
-               verify(VARIANT_2,    test_output_v2)  &&
-               verify(VARIANT_XTL,  test_output_xtl) &&
-               verify(VARIANT_MSR,  test_output_msr) &&
-               verify(VARIANT_XAO,  test_output_xao) &&
-               verify(VARIANT_RTO,  test_output_rto) &&
-               verify(VARIANT_HALF, test_output_half);
+        const bool rc = verify(VARIANT_0,      test_output_v0)   &&
+                        verify(VARIANT_1,      test_output_v1)   &&
+                        verify(VARIANT_2,      test_output_v2)   &&
+                        verify(VARIANT_XTL,    test_output_xtl)  &&
+                        verify(VARIANT_MSR,    test_output_msr)  &&
+                        verify(VARIANT_XAO,    test_output_xao)  &&
+                        verify(VARIANT_RTO,    test_output_rto)  &&
+                        verify(VARIANT_HALF,   test_output_half) &&
+                        verify2(VARIANT_WOW,   test_output_wow)  &&
+                        verify2(VARIANT_4,     test_output_r)    &&
+                        verify(VARIANT_RWZ,    test_output_rwz)  &&
+                        verify(VARIANT_ZLS,    test_output_zls)  &&
+                        verify(VARIANT_DOUBLE, test_output_double);
+
+#       ifndef XMRIG_NO_CN_GPU
+        if (!rc || N > 1) {
+            return rc;
+        }
+
+        return verify(VARIANT_GPU, test_output_gpu);
+#       else
+        return rc;
+#       endif
     }
 
 #   ifndef XMRIG_NO_AEON
@@ -111,11 +127,11 @@ void MultiWorker<N>::start()
                 storeStats();
             }
 
-            m_thread->fn(m_state.job.algorithm().variant())(m_state.blob, m_state.job.size(), m_hash, m_ctx);
+            m_thread->fn(m_state.job.algorithm().variant())(m_state.blob, m_state.job.size(), m_hash, m_ctx, m_state.job.height());
 
             for (size_t i = 0; i < N; ++i) {
                 if (*reinterpret_cast<uint64_t*>(m_hash + (i * 32) + 24) < m_state.job.target()) {
-                    Workers::submit(JobResult(m_state.job.poolId(), m_state.job.id(), m_state.job.clientId(), *nonce(i), m_hash + (i * 32), m_state.job.diff(), m_state.job.algorithm()));
+                    Workers::submit(xmrig::JobResult(m_state.job.poolId(), m_state.job.id(), m_state.job.clientId(), *nonce(i), m_hash + (i * 32), m_state.job.diff(), m_state.job.algorithm()));
                 }
 
                 *nonce(i) += 1;
@@ -132,7 +148,7 @@ void MultiWorker<N>::start()
 
 
 template<size_t N>
-bool MultiWorker<N>::resume(const Job &job)
+bool MultiWorker<N>::resume(const xmrig::Job &job)
 {
     if (m_state.job.poolId() == -1 && job.poolId() >= 0 && job.id() == m_pausedState.job.id()) {
         m_state = m_pausedState;
@@ -152,15 +168,62 @@ bool MultiWorker<N>::verify(xmrig::Variant variant, const uint8_t *referenceValu
         return false;
     }
 
-    func(test_input, 76, m_hash, m_ctx);
+    func(test_input, 76, m_hash, m_ctx, 0);
     return memcmp(m_hash, referenceValue, sizeof m_hash) == 0;
+}
+
+
+template<size_t N>
+bool MultiWorker<N>::verify2(xmrig::Variant variant, const uint8_t *referenceValue)
+{
+    xmrig::CpuThread::cn_hash_fun func = m_thread->fn(variant);
+    if (!func) {
+        return false;
+    }
+
+    for (size_t i = 0; i < (sizeof(cn_r_test_input) / sizeof(cn_r_test_input[0])); ++i) {
+        const size_t size = cn_r_test_input[i].size;
+        for (size_t k = 0; k < N; ++k) {
+            memcpy(m_state.blob + (k * size), cn_r_test_input[i].data, size);
+        }
+
+        func(m_state.blob, size, m_hash, m_ctx, cn_r_test_input[i].height);
+
+        for (size_t k = 0; k < N; ++k) {
+            if (memcmp(m_hash + k * 32, referenceValue + i * 32, sizeof m_hash / N) != 0) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+
+template<>
+bool MultiWorker<1>::verify2(xmrig::Variant variant, const uint8_t *referenceValue)
+{
+    xmrig::CpuThread::cn_hash_fun func = m_thread->fn(variant);
+    if (!func) {
+        return false;
+    }
+
+    for (size_t i = 0; i < (sizeof(cn_r_test_input) / sizeof(cn_r_test_input[0])); ++i) {
+        func(cn_r_test_input[i].data, cn_r_test_input[i].size, m_hash, m_ctx, cn_r_test_input[i].height);
+
+        if (memcmp(m_hash, referenceValue + i * 32, sizeof m_hash) != 0) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 
 template<size_t N>
 void MultiWorker<N>::consumeJob()
 {
-    Job job = Workers::job();
+    xmrig::Job job = Workers::job();
     m_sequence = Workers::sequence();
     if (m_state.job == job) {
         return;
@@ -195,7 +258,7 @@ void MultiWorker<N>::consumeJob()
 
 
 template<size_t N>
-void MultiWorker<N>::save(const Job &job)
+void MultiWorker<N>::save(const xmrig::Job &job)
 {
     if (job.poolId() == -1 && m_state.job.poolId() >= 0) {
         m_pausedState = m_state;

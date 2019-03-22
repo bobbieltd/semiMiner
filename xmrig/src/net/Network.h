@@ -5,7 +5,8 @@
  * Copyright 2014-2016 Wolf9466    <https://github.com/OhGodAPet>
  * Copyright 2016      Jay D Dee   <jayddee246@gmail.com>
  * Copyright 2017-2018 XMR-Stak    <https://github.com/fireice-uk>, <https://github.com/psychocrypt>
- * Copyright 2016-2018 XMRig       <https://github.com/xmrig>, <support@xmrig.com>
+ * Copyright 2018-2019 SChernykh   <https://github.com/SChernykh>
+ * Copyright 2016-2019 XMRig       <https://github.com/xmrig>, <support@xmrig.com>
  *
  *   This program is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -21,8 +22,8 @@
  *   along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __NETWORK_H__
-#define __NETWORK_H__
+#ifndef XMRIG_NETWORK_H
+#define XMRIG_NETWORK_H
 
 
 #include <vector>
@@ -30,50 +31,52 @@
 
 
 #include "api/NetworkState.h"
+#include "common/interfaces/IControllerListener.h"
 #include "common/interfaces/IStrategyListener.h"
 #include "interfaces/IJobResultListener.h"
 
 
-class IStrategy;
-class Url;
-
-
 namespace xmrig {
-    class Controller;
-}
 
 
-class Network : public IJobResultListener, public IStrategyListener
+class Controller;
+class IStrategy;
+
+
+class Network : public IJobResultListener, public IStrategyListener, public IControllerListener
 {
 public:
-  Network(xmrig::Controller *controller);
-  ~Network();
+    Network(Controller *controller);
+    ~Network() override;
 
-  void connect();
-  void stop();
+    void connect();
+    void stop();
 
 protected:
-  void onActive(IStrategy *strategy, Client *client) override;
-  void onJob(IStrategy *strategy, Client *client, const Job &job) override;
-  void onJobResult(const JobResult &result) override;
-  void onPause(IStrategy *strategy) override;
-  void onResultAccepted(IStrategy *strategy, Client *client, const SubmitResult &result, const char *error) override;
+    void onActive(IStrategy *strategy, Client *client) override;
+    void onConfigChanged(Config *config, Config *previousConfig) override;
+    void onJob(IStrategy *strategy, Client *client, const Job &job) override;
+    void onJobResult(const JobResult &result) override;
+    void onPause(IStrategy *strategy) override;
+    void onResultAccepted(IStrategy *strategy, Client *client, const SubmitResult &result, const char *error) override;
 
 private:
-  constexpr static int kTickInterval = 1 * 1000;
+    constexpr static int kTickInterval = 1 * 1000;
 
-  bool isColors() const;
-  void setJob(Client *client, const Job &job, bool donate);
-  void tick();
+    bool isColors() const;
+    void setJob(Client *client, const Job &job, bool donate);
+    void tick();
 
-  static void onTick(uv_timer_t *handle);
+    static void onTick(uv_timer_t *handle);
 
-  IStrategy *m_donate;
-  IStrategy *m_strategy;
-  NetworkState m_state;
-  uv_timer_t m_timer;
-  xmrig::Controller *m_controller;
+    IStrategy *m_donate;
+    IStrategy *m_strategy;
+    NetworkState m_state;
+    uv_timer_t m_timer;
 };
 
 
-#endif /* __NETWORK_H__ */
+} /* namespace xmrig */
+
+
+#endif /* XMRIG_NETWORK_H */
